@@ -1,42 +1,40 @@
 <?php
 require_once "connection.php";
 
-if($_SERVER["REQUEST_METHOD"]=="POST"){
+if($_SERVER["REQUEST_METHOD"]=="POST" && $connection){
     $name=$_POST["fname"];
     $surName=$_POST["lname"];
-    $resultFlag=0;
-
-    if($connection){
-        $fetch="SELECT * FROM users WHERE fname=$name AND lname=$surName";
-        $result=$connection->query($fetch);
+  
+        $result=$connection->query("SELECT fname, lname FROM users WHERE users.fname=$name AND users.lname=$surName;");
+        $csql="SELECT * FROM users WHERE users.fname=? AND users.lname=?";
+        $check=$connection->prepare($csql);
+        $check->bind_param("ss",$name,$surName);
+        $check->execute();
+        $result=$check->get_result();
 
         if($result->num_rows>0){
-            $resultFlag=1;
-        }
-    }
- 
-    if($connection && !empty($name) && !empty($surName) && $resultFlag){
-        $sql="INSERT INTO users (fname,lname) VALUES (?,?)";
-        $stmt=$connection->prepare($sql);
-        $stmt->bind_param("ss",$name,$surName);
-        if($stmt->execute()){
-            echo "Inserted";
+            header("Location:index.php? oops something went wrong");
+            $check->close();
+            $connection->close();
         }else{
-            echo "Error inserting into db";
-        }
 
-        $stmt=null;
-        $connection=null;
+            if( !empty($name) && !empty($surName)){
+                $sql="INSERT INTO users (fname,lname) VALUES (?,?)";
+                $stmt=$connection->prepare($sql);
+                $stmt->bind_param("ss",$name,$surName);
+                if($stmt->execute()){
+                    echo "Inserted";
+                }else{
+                    echo "Error inserting into db";
+                }
         
-        echo $name;
-        echo $surName;
-    }else{
-        header("Location:index.php? oops something went wrong");
-    }
-
-
-    
-
+                $stmt=null;
+                $connection=null;
+                
+                echo $name;
+                echo $surName;
+            }
+        }
 }else{
     echo "Bad Gate Way";
 }
